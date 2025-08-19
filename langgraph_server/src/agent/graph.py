@@ -10,10 +10,10 @@ from  pydantic import BaseModel
 from typing import TypedDict, List,Annotated
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-model = ChatGoogleGenerativeAI(model='gemini-2.0-flash',api_key="AIzaSyDK1CNcAhSrM4qy3UVIXLu7J7Qk2U51Rug",disable_streaming=True)
-# stream_model = ChatGoogleGenerativeAI(model='gemini-2.0-flash',api_key="AIzaSyDK1CNcAhSrM4qy3UVIXLu7J7Qk2U51Rug")
-# os.environ['GOOGLE_API_KEY'] = "AIzaSyDK1CNcAhSrM4qy3UVIXLu7J7Qk2U51Rug"
-os.environ['TAVILY_API_KEY'] = "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"
+model = ChatGoogleGenerativeAI(model='gemini-2.0-flash',api_key="AIzaSyDK1CN**********IXLu7J7Qk2U51Rug",disable_streaming=True)
+stream_model = ChatGoogleGenerativeAI(model='gemini-2.0-flash',api_key="AIzaSyDK1CNc***********IXLu7J7Qk2U51Rug")
+# os.environ['GOOGLE_API_KEY'] = "AIzaSyDK1CNcAh*********Lu7J7Qk2U51Rug"
+os.environ['TAVILY_API_KEY'] = "tvly-dev-XZ0dZP6e*********GpthPim8jRJctNr"
 # tavily = TavilySearchResults(max_results=4)
 
 from tavily import TavilyClient
@@ -227,7 +227,7 @@ graph = builder.compile()
 # # Run it!
 # thread = {"configurable": {"thread_id": "1"}}
 # for s,m in graph.stream({
-#     'task': "Write a report about the latest inflation figures in the European Union.",
+#     'task': "Write a report about russia ukraine war.",
 #     "max_revisions": 2,
 #     "revision_number": 1
 # }, thread,stream_mode="messages"):
