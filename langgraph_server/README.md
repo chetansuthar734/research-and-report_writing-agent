@@ -4,6 +4,7 @@ project name : Research and report writing agent with tavily search tool
 [1].how Research and report writing agent work :
 
 At frontend use Reactjs useStream() hook to render messages
+
 backend side
 
 In this example, each of the 5 agents plays a different role:
