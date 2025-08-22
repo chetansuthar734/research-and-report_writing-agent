@@ -1,3 +1,22 @@
+# from langgraph.graph import StateGraph ,START ,MessagesState ,add_messages
+# from typing_extensions import TypedDict ,Annotated ,List
+
+# def node(state):
+#     msg = state.get('messages','')[-1].content.strip()
+#     print(msg)
+#     return {'messages':'end here'}
+
+
+# graph = (StateGraph(MessagesState)
+#         .add_node('node',node)
+#         .add_edge(START,'node')
+#         ).compile()
+
+# print(graph.invoke({'messages':['hi']}))
+
+
+
+
 import os
 # from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.checkpoint.memory import InMemorySaver
@@ -10,10 +29,10 @@ from  pydantic import BaseModel
 from typing_extensions import TypedDict, List,Annotated
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-model = ChatGoogleGenerativeAI(model='gemini-2.0-flash',api_key="AIzaSyDK1CN**********IXLu7J7Qk2U51Rug",disable_streaming=True)
-stream_model = ChatGoogleGenerativeAI(model='gemini-2.0-flash',api_key="AIzaSyDK1CNc***********IXLu7J7Qk2U51Rug")
+model = ChatGoogleGenerativeAI(model='gemini-2.0-flash',api_key="AIzaSyDK1CNcAhSrM4qy3UVIXLu7J7Qk2U51Rug",disable_streaming=True)
+# stream_model = ChatGoogleGenerativeAI(model='gemini-2.0-flash',api_key="AIzaSyDK1CNc***********IXLu7J7Qk2U51Rug")
 # os.environ['GOOGLE_API_KEY'] = "AIzaSyDK1CNcAh*********Lu7J7Qk2U51Rug"
-os.environ['TAVILY_API_KEY'] = "tvly-dev-XZ0dZP6e*********GpthPim8jRJctNr"
+os.environ['TAVILY_API_KEY'] = "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"
 # tavily = TavilySearchResults(max_results=4)
 
 from tavily import TavilyClient
@@ -37,7 +56,8 @@ class State(TypedDict):
     max_revisions: int
     messages:Annotated[List[str],add_messages]
 
-
+class IState(TypedDict):
+    task:str
 
 
 PLAN_PROMPT = """You are an expert writer tasked with writing a report. \
@@ -101,10 +121,11 @@ class Queries(BaseModel):
 
 from langgraph.config import get_stream_writer
 
-def plan_node(state: State):
+def plan_node(state: IState)->State:
+    print(state['task'])
     writer = get_stream_writer()
     writer('plan node executing .....')
-    task = state.get('task','')[-1].content.strip()
+    task = state.get('task','').strip()
     if not task:
         raise ValueError("Task cannot be empty for the planner.")
     
@@ -113,7 +134,7 @@ def plan_node(state: State):
         HumanMessage(content=task)
     ]
     response = model.invoke(messages)
-    return {"plan": response.content ,"messages":[AIMessage(content='planning complate')]}
+    return {"plan": response.content ,"messages":[AIMessage(content='planning complate')],'max_revisions':3,"revision_number":0}
 
 
 
@@ -183,11 +204,15 @@ def research_critique_node(state:State):
 
 def should_continue(state):
     if state["revision_number"] > state["max_revisions"]:
-        return "report_out"
+        return "__end__"
     return "reflect"
 
 # Initialise the graph with the agent state
-builder = StateGraph(State)
+
+
+    
+
+builder = StateGraph(State,input_schema=IState)
 
 # Add all the nodes (agents)
 builder.add_node("planner", plan_node)
@@ -195,7 +220,7 @@ builder.add_node("generate", generation_node)
 builder.add_node("reflect", reflection_node)
 builder.add_node("research_plan", research_plan_node)
 builder.add_node("research_critique", research_critique_node)
-builder.add_node('report_out',report_out)
+
 
 # Set the starting agent
 builder.set_entry_point("planner")
@@ -205,7 +230,7 @@ builder.set_entry_point("planner")
 builder.add_conditional_edges(
     "generate", 
     should_continue, 
-    {END: END, "reflect": "reflect","report_out":"report_out"}
+    {"__end__": END, "reflect": "reflect"}
 )
 
 # Agent workflow ("generate" is already covered by the conditional edge)
@@ -232,6 +257,3 @@ graph = builder.compile()
 #     "revision_number": 1
 # }, thread,stream_mode="messages"):
 #     pprint.pprint(s.content)
-
-
-
