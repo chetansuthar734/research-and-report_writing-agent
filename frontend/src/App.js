@@ -79,17 +79,33 @@ export default function App() {
         className="input-bar"
         onSubmit={(e) => {
           e.preventDefault();
+          
           const form = e.target;
           const message = new FormData(form).get("message");
+          
           form.reset();
           setUser(message)
-          thread.submit({
+
+
+
+          
+          thread.submit(
+            {
           task: message,          
           revision_number: 1,
           max_revisions: 2,
           messages:[message]
-          },{streamMode:["custom"]});
+          
+            },
+            
+          {
+            streamMode:["custom"]
+          
+          }
+                       );
 
+
+          
         }}
       >
        
