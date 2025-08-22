@@ -104,7 +104,7 @@ from langgraph.config import get_stream_writer
 def plan_node(state: State):
     writer = get_stream_writer()
     writer('plan node executing .....')
-    task = state.get("task", "").strip()
+    task = state.get('task','')[-1].content.strip()
     if not task:
         raise ValueError("Task cannot be empty for the planner.")
     
