@@ -1,22 +1,3 @@
-# from langgraph.graph import StateGraph ,START ,MessagesState ,add_messages
-# from typing_extensions import TypedDict ,Annotated ,List
-
-# def node(state):
-#     msg = state.get('messages','')[-1].content.strip()
-#     print(msg)
-#     return {'messages':'end here'}
-
-
-# graph = (StateGraph(MessagesState)
-#         .add_node('node',node)
-#         .add_edge(START,'node')
-#         ).compile()
-
-# print(graph.invoke({'messages':['hi']}))
-
-
-
-
 import os
 # from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.checkpoint.memory import InMemorySaver
@@ -26,12 +7,12 @@ from  pydantic import BaseModel
 # from langchain_community.tools.tavily_search import TavilySearchResults
 
 
-from typing_extensions import TypedDict, List,Annotated
+from typing import TypedDict, List,Annotated
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 model = ChatGoogleGenerativeAI(model='gemini-2.0-flash',api_key="AIzaSyDK1CNcAhSrM4qy3UVIXLu7J7Qk2U51Rug",disable_streaming=True)
-# stream_model = ChatGoogleGenerativeAI(model='gemini-2.0-flash',api_key="AIzaSyDK1CNc***********IXLu7J7Qk2U51Rug")
-# os.environ['GOOGLE_API_KEY'] = "AIzaSyDK1CNcAh*********Lu7J7Qk2U51Rug"
+stream_model = ChatGoogleGenerativeAI(model='gemini-2.0-flash',api_key="AIzaSyDK1CNcAhSrM4qy3UVIXLu7J7Qk2U51Rug")
+# os.environ['GOOGLE_API_KEY'] = "AIzaSyDK1CNcAhSrM4qy3UVIXLu7J7Qk2U51Rug"
 os.environ['TAVILY_API_KEY'] = "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"
 # tavily = TavilySearchResults(max_results=4)
 
@@ -56,8 +37,7 @@ class State(TypedDict):
     max_revisions: int
     messages:Annotated[List[str],add_messages]
 
-class IState(TypedDict):
-    task:str
+
 
 
 PLAN_PROMPT = """You are an expert writer tasked with writing a report. \
@@ -121,11 +101,10 @@ class Queries(BaseModel):
 
 from langgraph.config import get_stream_writer
 
-def plan_node(state: IState)->State:
-    print(state['task'])
+def plan_node(state: State):
     writer = get_stream_writer()
     writer('plan node executing .....')
-    task = state.get('task','').strip()
+    task = state.get("task", "").strip()
     if not task:
         raise ValueError("Task cannot be empty for the planner.")
     
@@ -134,7 +113,11 @@ def plan_node(state: IState)->State:
         HumanMessage(content=task)
     ]
     response = model.invoke(messages)
-    return {"plan": response.content ,"messages":[AIMessage(content='planning complate')],'max_revisions':3,"revision_number":0}
+
+    return {"plan": response.content ,
+    # "messages":[AIMessage(content='planning complate')]
+    }
+
 
 
 
@@ -145,18 +128,23 @@ def research_plan_node(state:State):
         SystemMessage(content=RESEARCH_PLAN_PROMPT),
         HumanMessage(content=state['task'])
     ])
+
     print('research plan node')
+    
     content = state.get('content', [])
     for q in queries.queries:
         response = tavily.search(query=q, max_results=2)
         for r in response['results']:
             content.append(r['content'])
-    return {"content": content,"messages":[AIMessage(content='research plan node complate')]}
+    return {"content": content}
+
+
+
 
 def generation_node(state: State):
     writer = get_stream_writer()
-    writer('generate report.....')
-    print('generate node')
+    writer('generating report.....')
+    print('generating node')
     content = "\n\n".join(state['content'] or [])
     user_message = HumanMessage(
         content=f"{state['task']}\n\nHere is my plan:\n\n{state['plan']}")
@@ -166,19 +154,34 @@ def generation_node(state: State):
         ),
         user_message
         ]
-    response = model.invoke(messages)
-    return {
-        "draft": response.content,
+    response=""
+    # response = model.invoke(messages)
+    for chunk in stream_model.stream(messages):
+        print(chunk.content)
+        if state.get("revision_number",1)==2:
+            response+=chunk.content
+            # writer(chunk.content)
+            writer(response) # final streaming 
+            #  print(chunk.content)
+        response+=chunk.content
+
+
+    return{
+        "draft": response,
         "revision_number": state.get("revision_number", 1) + 1,
-        "messages":[AIMessage(content=f"generation node ......revise{state.get('revision_number',None)}")]
-    }
+        # "messages":[AIMessage(content=f"generation node ......revise{state.get('revision_number',None)}")]
+        }
+
+
+
 
 def report_out(state:State):
     print('report submit')
-    return {'messages':[AIMessage(content=state.get('draft'))]}
+    return {'messages':[AIMessage(content=state.get('draft',''))]}
 
 
 def reflection_node(state:State):
+    print('reflection_node executing')
     writer = get_stream_writer()
     writer('reflect on generate report .....')
     messages = [
@@ -186,9 +189,12 @@ def reflection_node(state:State):
         HumanMessage(content=state['draft'])
     ]
     response = model.invoke(messages)
-    return {"critique": response.content,"messages":[AIMessage(content='reflect on generate report ....')]}
+    return {"critique": response.content,
+    # "messages":[AIMessage(content='reflect on generate report ....')]
+    }
 
 def research_critique_node(state:State):
+    print('research critque node.....')
     writer = get_stream_writer()
     writer('critique by external source.....')
     queries = model.with_structured_output(Queries).invoke([
@@ -200,19 +206,17 @@ def research_critique_node(state:State):
         response = tavily.search(query=q, max_results=2)
         for r in response['results']:
             content.append(r['content'])
-    return {"content": content,"messages":[AIMessage(content='research critique node ......')]}
+    return {"content": content,
+    # "messages":[AIMessage(content='research critique node ......')]
+    }
 
 def should_continue(state):
     if state["revision_number"] > state["max_revisions"]:
-        return "__end__"
+        return "report_out"
     return "reflect"
 
 # Initialise the graph with the agent state
-
-
-    
-
-builder = StateGraph(State,input_schema=IState)
+builder = StateGraph(State)
 
 # Add all the nodes (agents)
 builder.add_node("planner", plan_node)
@@ -220,7 +224,7 @@ builder.add_node("generate", generation_node)
 builder.add_node("reflect", reflection_node)
 builder.add_node("research_plan", research_plan_node)
 builder.add_node("research_critique", research_critique_node)
-
+builder.add_node('report_out',report_out)
 
 # Set the starting agent
 builder.set_entry_point("planner")
@@ -230,7 +234,7 @@ builder.set_entry_point("planner")
 builder.add_conditional_edges(
     "generate", 
     should_continue, 
-    {"__end__": END, "reflect": "reflect"}
+    {"reflect": "reflect","report_out":"report_out"}
 )
 
 # Agent workflow ("generate" is already covered by the conditional edge)
@@ -239,6 +243,7 @@ builder.add_edge("research_plan", "generate")
 
 builder.add_edge("reflect", "research_critique")
 builder.add_edge("research_critique", "generate")
+builder.add_edge('report_out',END)
 
 # Compile 
 graph = builder.compile()
@@ -252,8 +257,11 @@ graph = builder.compile()
 # # Run it!
 # thread = {"configurable": {"thread_id": "1"}}
 # for s,m in graph.stream({
-#     'task': "Write a report about russia ukraine war.",
+#     'task': "Write a report about the latest inflation figures in the European Union.",
 #     "max_revisions": 2,
 #     "revision_number": 1
 # }, thread,stream_mode="messages"):
 #     pprint.pprint(s.content)
+
+
+
