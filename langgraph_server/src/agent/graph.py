@@ -256,6 +256,56 @@ graph = builder.compile()
 
 
 
+# Reactjs useStream hook to access final output of graph 
+
+# //  console.log('refreshed')
+#   const thread = useStream({
+#     // apiUrl: "http://127.0.0.1:9090",
+#     apiUrl: "http://127.0.0.1:9999",
+#     assistantId: "agent",
+#     messagesKey: "messages",
+
+#     onFinish:(finalevent)=>{
+#       setPartialResponse("")
+#       // setFinalMessages(thread.messages); 
+
+#       console.log(finalevent.values)    
+
+
+ #    #  finalevent.values.state_key represent #
+
+# content: ["# Report Writing: Overview The language of reports…o throughout your discussion or results sections.", "A report is written with a clear purpose and for a…shed sources referred to in your research report.", "World inflation rate for 2023 was 5.73%, a 2.2% de… 4.46% increase from 2021. · World inflation rate", "Global inflation is forecast to decline steadily, …ent in 2025, with advanced economies returning to", "The most recent factor estimates indicate that the…xtraordinarily expansionary demand conditions and", "The analysis suggests that fiscal policy played an…y contributed to inflation between 2021 and 2023.", "First, policy rules that respond forcefully to inf…n improve stability and reduce ELB-related risks.", "Why monetary policy should crack down harder durin…-dependent pricing”, CEPR Discussion Paper 19339.", "Global Impacts of the Ukraine War Two Years On | I…rests that European states held vis-a-vis Russia.", "The war in Ukraine has also resulted in significan…trading infrastructure, huge damage to production", …] (68)
+
+# critique: "This is a good start to a comprehensive report on Russia! You've covered a lot of ground and touched upon key aspects of its history…"
+# 
+# draft: "``````markdown↵# Russia: A Comprehensive Overview↵↵## 1. Executive Summary↵↵Russia ismarkdown↵# Russia: A Comprehensive Overview↵↵## 1…"
+
+# max_revisions: 2
+
+# messages: [Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, …] (14)
+
+# plan: "Okay, I can create a report on Russia. Here's an outline and some notes to guide the writing process. This is designed to be …"
+# 
+# revision_number: 3
+
+# task: "russia"
+ 
+
+#       // console.log(finalevent.values.messages)
+#       setFinalMessages(finalevent.values.messages); 
+#       ; // clear partial
+#       setUser("")
+#       },
+#     onCustomEvent: (event, options) => {
+#        setPartialResponse(event)},    //for custom data stream by get_stream_writer
+#     onError:(e)=>{console.log(e)}
+#     // onCustomEvent: for custom event handler
+    
+#   });
+
+
+
+
 
 # import pprint
 # # Run it!
