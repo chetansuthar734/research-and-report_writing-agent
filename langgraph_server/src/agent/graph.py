@@ -90,7 +90,7 @@ RESEARCH_CRITIQUE_PROMPT = """You are a researcher charged with providing inform
 be used when making any requested revisions (as outlined below). \
 Generate a list of search queries that will gather any relevant information. Only generate 3 queries max."""
 
-# Queries list for the Tavily search tool
+#list of search query  for the Tavily search
 class Queries(BaseModel):
     queries: List[str]
 
@@ -237,10 +237,10 @@ def should_continue(state):
         return "report_out"
     return "reflect"
 
-# Initialise the graph with the agent state
+# Initialise the graph with overallstate ,input_schema and output_schema
 builder = StateGraph(State,input_schema=IState,output_schema=OState)
 
-# Add all the nodes (agents)
+# add all the nodes
 builder.add_node("planner", plan_node)
 builder.add_node("generate", generation_node)
 builder.add_node("reflect", reflection_node)
@@ -248,18 +248,17 @@ builder.add_node("research_plan", research_plan_node)
 builder.add_node("research_critique", research_critique_node)
 builder.add_node('report_out',report_out)
 
-# Set the starting agent
+
 builder.set_entry_point("planner")
 
 # Set the conditional edge
-# This decides, whether to do another refinement loop, or to end
 builder.add_conditional_edges(
     "generate", 
     should_continue, 
     {"reflect": "reflect","report_out":"report_out"}
 )
 
-# Agent workflow ("generate" is already covered by the conditional edge)
+
 builder.add_edge("planner", "research_plan")
 builder.add_edge("research_plan", "generate")
 
@@ -267,7 +266,7 @@ builder.add_edge("reflect", "research_critique")
 builder.add_edge("research_critique", "generate")
 builder.add_edge('report_out',END)
 
-# Compile 
+
 graph = builder.compile()
 
 
