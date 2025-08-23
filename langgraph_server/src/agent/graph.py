@@ -2,7 +2,7 @@ import os
 # from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import StateGraph, END,add_messages
-from langchain_core.messages import SystemMessage, HumanMessage,AIMessage,ToolMessage
+from langchain_core.messages import SystemMessage, HumanMessage,AIMessage,ToolMessage,BaseMessage
 from  pydantic import BaseModel
 # from langchain_community.tools.tavily_search import TavilySearchResults
 
@@ -37,6 +37,11 @@ class State(TypedDict):
     max_revisions: int
     messages:Annotated[List[str],add_messages]
 
+class IState(TypedDict):
+    messages:List[BaseMessage]
+
+class OState(TypedDict):
+    messages:List[BaseMessage]
 
 
 
@@ -101,24 +106,37 @@ class Queries(BaseModel):
 
 from langgraph.config import get_stream_writer
 
-def plan_node(state: State):
+def plan_node(state: IState)->State:
     writer = get_stream_writer()
     writer('plan node executing .....')
-    try:
-        task = state.get("task", "").strip()
+    print('plan node')
 
-    except:
-        if not task:
+    messages = state.get("messages", [])
+
+
+    
+    if not messages:
             writer('provide infomation')
             raise ValueError("Task cannot be empty for the planner.")
     
+    
+    task = messages[-1].content.strip()
+    print(task)
+
+
+
+
     messages = [
         SystemMessage(content=PLAN_PROMPT),
         HumanMessage(content=task)
     ]
-    response = model.invoke(messages)
+    try:
+        response = model.invoke(messages)
 
-    return {"plan": response.content ,
+    except:
+        writer('it may be net error or provide infomation')
+
+    return {"plan": response.content ,"draft":'chetan',"task":task,"revision_number":0,"max_revisions":2,
     # "messages":[AIMessage(content='planning complate')]
     }
 
@@ -179,7 +197,7 @@ def generation_node(state: State):
 
 
 
-def report_out(state:State):
+def report_out(state:State)->OState:
     print('report submit')
     return {'messages':[AIMessage(content=state.get('draft',''))]}
 
@@ -220,7 +238,7 @@ def should_continue(state):
     return "reflect"
 
 # Initialise the graph with the agent state
-builder = StateGraph(State)
+builder = StateGraph(State,input_schema=IState,output_schema=OState)
 
 # Add all the nodes (agents)
 builder.add_node("planner", plan_node)
@@ -252,56 +270,6 @@ builder.add_edge('report_out',END)
 # Compile 
 graph = builder.compile()
 
-
-
-
-
-# Reactjs useStream hook to access final output of graph 
-
-# //  console.log('refreshed')
-#   const thread = useStream({
-#     // apiUrl: "http://127.0.0.1:9090",
-#     apiUrl: "http://127.0.0.1:9999",
-#     assistantId: "agent",
-#     messagesKey: "messages",
-
-#     onFinish:(finalevent)=>{
-#       setPartialResponse("")
-#       // setFinalMessages(thread.messages); 
-
-#       console.log(finalevent.values)    
-
-
- #    #  finalevent.values.state_key represent #
-
-# content: ["# Report Writing: Overview The language of reports…o throughout your discussion or results sections.", "A report is written with a clear purpose and for a…shed sources referred to in your research report.", "World inflation rate for 2023 was 5.73%, a 2.2% de… 4.46% increase from 2021. · World inflation rate", "Global inflation is forecast to decline steadily, …ent in 2025, with advanced economies returning to", "The most recent factor estimates indicate that the…xtraordinarily expansionary demand conditions and", "The analysis suggests that fiscal policy played an…y contributed to inflation between 2021 and 2023.", "First, policy rules that respond forcefully to inf…n improve stability and reduce ELB-related risks.", "Why monetary policy should crack down harder durin…-dependent pricing”, CEPR Discussion Paper 19339.", "Global Impacts of the Ukraine War Two Years On | I…rests that European states held vis-a-vis Russia.", "The war in Ukraine has also resulted in significan…trading infrastructure, huge damage to production", …] (68)
-
-# critique: "This is a good start to a comprehensive report on Russia! You've covered a lot of ground and touched upon key aspects of its history…"
-# 
-# draft: "``````markdown↵# Russia: A Comprehensive Overview↵↵## 1. Executive Summary↵↵Russia ismarkdown↵# Russia: A Comprehensive Overview↵↵## 1…"
-
-# max_revisions: 2
-
-# messages: [Object, Object, Object, Object, Object, Object, Object, Object, Object, Object, …] (14)
-
-# plan: "Okay, I can create a report on Russia. Here's an outline and some notes to guide the writing process. This is designed to be …"
-# 
-# revision_number: 3
-
-# task: "russia"
- 
-
-#       // console.log(finalevent.values.messages)
-#       setFinalMessages(finalevent.values.messages); 
-#       ; // clear partial
-#       setUser("")
-#       },
-#     onCustomEvent: (event, options) => {
-#        setPartialResponse(event)},    //for custom data stream by get_stream_writer
-#     onError:(e)=>{console.log(e)}
-#     // onCustomEvent: for custom event handler
-    
-#   });
 
 
 
