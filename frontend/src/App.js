@@ -21,22 +21,26 @@ export default function App() {
 //  console.log('refreshed')
   const thread = useStream({
     // apiUrl: "http://127.0.0.1:9090",
-    apiUrl: "http://127.0.0.1:2023",
+    apiUrl: "http://127.0.0.1:9999",
     assistantId: "agent",
-    messagesKey: "messages",
+    // messagesKey: "messages",
+    messagesKey: "draft",
     onFinish:(finalevent)=>{
       setPartialResponse("")
       // setFinalMessages(thread.messages); 
-      console.log(finalevent.values.messages)
+      // console.log(finalevent.values.draft)
+      // console.log(finalevent.values.messages)
       setFinalMessages(finalevent.values.messages); 
       ; // clear partial
       setUser("")
       },
+      
     onCustomEvent: (event, options) => {
-       setPartialResponse(event)}    //for custom data stream by get_stream_writer
-    
+      // console.log(event,options)
+       setPartialResponse(event)},    //for custom data stream by get_stream_writer
+    onError:(e)=>{console.log(e)},
     // onCustomEvent: for custom event handler
-    
+
   });
 
 // useEffect(()=>{thread.events.forEach(element => {
@@ -48,7 +52,8 @@ export default function App() {
  <div className="messages">
 
 
-        {/* {thread.messages.map((msg) => ( */}
+       
+
         {finalMessages.map((msg) => ( 
 
           <div
@@ -79,33 +84,19 @@ export default function App() {
         className="input-bar"
         onSubmit={(e) => {
           e.preventDefault();
-          
           const form = e.target;
           const message = new FormData(form).get("message");
-          
           form.reset();
           setUser(message)
-
-
-
           
-          thread.submit(
-            {
-          task: message,          
-          revision_number: 1,
-          max_revisions: 2,
+
+          thread.submit({
+          // task: message,          
+          // revision_number: 1,
+          // max_revisions: 2,
           messages:[message]
-          
-            },
-            
-          {
-            streamMode:["custom"]
-          
-          }
-                       );
+          },{streamMode:["custom"]});
 
-
-          
         }}
       >
        
